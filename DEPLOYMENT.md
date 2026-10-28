@@ -110,7 +110,7 @@ build. After a release is merged/tagged:
 
 ## 4. Deploying the Web (`apps/web` — Cloudflare Pages)
 
-1. Create the Pages project named `crashed-nis-web`.
+1. Create the Pages project named `crashednis`.
 2. Bind the Pages Function to the Worker: `apps/web/wrangler.jsonc` holds the `API` service
    binding to the deployed `crashed-nis-api` Worker — configure it for both production and
    preview environments.
@@ -120,7 +120,7 @@ build. After a release is merged/tagged:
 4. Deploy:
    ```bash
    bun run --cwd apps/web build
-   bun x wrangler pages deploy dist --project-name crashed-nis-web
+   bun x wrangler pages deploy dist --project-name crashednis
    ```
    Automatically, deploy.yml typechecks, builds and pushes `dist` to Pages with the same two
    secrets whenever `apps/web` (or shared code) changes on `main`; `v*` tags and manual dispatch

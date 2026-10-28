@@ -96,7 +96,7 @@ jobs:
           curl -fsS "${{ vars.API_HEALTH_URL }}/health" -w '\nHTTP %{http_code}\n'
 
   web:
-    name: Web → crashed-nis-web (Pages)
+    name: Web → crashednis (Pages)
     if: >-
       always() &&
       needs.changes.outputs.web == 'true' &&
@@ -133,7 +133,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          out=$(bun x wrangler pages project create crashed-nis-web --production-branch=main 2>&1) ||
+          out=$(bun x wrangler pages project create crashednis --production-branch=main 2>&1) ||
             if echo "$out" | grep -qi 'already exists'; then
               echo 'Project already exists — continuing.'
             else
@@ -148,4 +148,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/web
-          command: pages deploy dist --project-name=crashed-nis-web
+          command: pages deploy dist --project-name=crashednis
