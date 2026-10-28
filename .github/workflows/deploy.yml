@@ -72,6 +72,12 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # The API typechecks against @crashed-nis/types' compiled dist/ (see
+      # its package.json exports): build shared workspaces before the gates,
+      # matching what turbo's typecheck does locally via `dependsOn: ^build`.
+      - name: Build shared packages
+        run: bun run --cwd packages/types build
+
       - name: Typecheck & test (deploy gate)
         run: bun run --cwd apps/api typecheck && bun run --cwd apps/api test
 
