@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "node",
+  "plugins": ["node-workspace"],
+  "separate-pull-requests": false,
+  "packages": {
+    ".": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "node",
+      "extra-files": []
+    },
+    "apps/api": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "node"
+    },
+    "apps/web": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "node"
+    },
+    "packages/types": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "node"
+    },
+    "packages/ui": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "node"
+    },
+    "packages/tsconfig": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "node"
+    }
+  }
+}

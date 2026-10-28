@@ -1,29 +1,99 @@
-# Create T3 App
+# Crashed NIS
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+A clean-room client for **NIS (Назарбаев Интеллектуальные школы)** student services: a
+Bun-workspace monorepo containing a Hono API that proxies and re-authenticates NIS
+microservice calls, and a Vite + React web app for the student dashboard (journal,
+transcript, mark forecasting).
 
-## What's next? How do I make an app with this?
+> **Disclaimer.** This project is an independent client and is not affiliated with or endorsed
+> by НИШ / NIS School.
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+## Architecture
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+```
+crashed.nis/
+├── apps/
+│   ├── api/                 # Hono on Cloudflare Workers — auth + NIS proxy API
+│   │   ├── bruno/           # Version-controlled Bruno request collection
+│   │   ├── src/
+│   │   │   ├── features/    # auth, student-data, user-info services
+│   │   │   ├── lib/         # token compression, JWT, issuer, city parsing
+│   │   │   ├── routes/      # auth + data routers
+│   │   │   └── shared/      # config, errors, http client (ky), schemas
+│   │   └── tests/           # bun:test in-memory integration tests
+│   └── web/                 # Vite + React dashboard
+│       ├── components/      # app-specific UI (modals, marks tables, layout)
+│       ├── src/pages/       # Журнал / Табель / Настройки / Прогноз / auth
+│       └── lib/             # api client + SWR hook, stores (zustand), helpers
+├── packages/
+│   ├── types/               # @crashed-nis/types — cross-workspace contracts
+│   ├── tsconfig/            # shared strict TypeScript configs
+│   └── ui/                  # @crashednis/ui — shared shadcn-style components
+└── turbo.json               # Turborepo task graph
+```
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+Data path: `web → /api/* (Vite proxy locally, Pages Function in production) → Hono Worker → NIS upstream`.
+The Worker holds HttpOnly, Secure cookies for the NIS access/refresh tokens and never exposes
+them to the browser; every upstream call goes through a single configured `ky` client.
 
-## Learn More
+## Tech stack
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+| Layer     | Tooling                                                                                    |
+| --------- | ------------------------------------------------------------------------------------------ |
+| Workspace | Bun workspaces + Turborepo                                                                 |
+| API       | Hono (`@hono/zod-openapi`), Cloudflare Workers, `ky`, Zod, Wrangler                        |
+| Web       | Vite, React 19, React Router (generouted), Tailwind CSS v4, SWR, Zustand, Base UI (shadcn) |
+| Quality   | TypeScript, oxlint, oxfmt, husky + lint-staged, release-please                             |
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+## Prerequisites
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+- [Bun](https://bun.sh) ≥ 1.4 (the only runtime/package manager — scripts and `bun.lock` assume it)
+- A Cloudflare account for deploying the Worker/Pages (development needs nothing extra)
+- Node.js is **not** required except APIs in `@types/node` for typechecking
 
-## How do I deploy this?
+## Getting started
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+```bash
+bun install            # installs all workspaces
+bun run dev            # API on http://localhost:8787 + web on http://localhost:5173
+```
+
+Local device testing over HTTPS (required for iOS Safari because cookies are `Secure`):
+
+```bash
+bun run --cwd apps/web dev:https
+```
+
+### Environment
+
+- `apps/web`: copy `.env.example` to `.env.local` to point Vite at a non-default API
+  (`BACKEND_URL`, default `http://localhost:8787`).
+- `apps/api`: production secrets/vars are configured with `wrangler secret put` — never commit
+  them; see `DEPLOYMENT.md`.
+
+## Scripts
+
+Run from the repo root (Turborepo orders workspaces):
+
+| Script              | What it does                                              |
+| ------------------- | --------------------------------------------------------- |
+| `bun run dev`       | Dev servers for all workspaces                            |
+| `bun run build`     | Production builds (Vite web, Wrangler dry-run api, types) |
+| `bun run test`      | API `bun:test` integration suite (in-memory `app.fetch`)  |
+| `bun run lint`      | oxlint across workspaces                                  |
+| `bun run format`    | oxfmt across workspaces                                   |
+| `bun run typecheck` | `tsc --noEmit` for every workspace                        |
+
+Per-workspace extras: `bun run --cwd apps/api typegen` (regenerate Worker binding types after
+Wrangler config changes), `bun run --cwd apps/web typegen` (Pages bindings).
+
+## API documentation
+
+- OpenAPI 3.1 spec: `/openapi.json` on the Worker, `/api/openapi.json` through the web proxy
+- Scalar reference: `/docs` in the web app
+
+## Releases
+
+Releases are automated by `release-please` from Conventional Commits; deployment steps and
+commit format are documented in [`DEPLOYMENT.md`](DEPLOYMENT.md). Git hooks (husky) format and
+typecheck staged changes on every `git commit`.

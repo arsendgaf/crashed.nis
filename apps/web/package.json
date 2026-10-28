@@ -1,0 +1,49 @@
+{
+  "name": "web",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "dev:https": "HTTPS=true vite --host",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
+    "typegen": "wrangler types --config wrangler.jsonc --include-runtime=false --env-interface CloudflareBindings",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@crashednis/ui": "workspace:*",
+    "@formisch/react": "^1.1.0",
+    "@generouted/react-router": "^1.20.2",
+    "@phosphor-icons/react": "^2.1.10",
+    "@scalar/api-reference-react": "^0.9.81",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-hotkeys": "^0.17.0",
+    "hono": "^4.13.13",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router": "^7.18.4",
+    "react-router-dom": "^7.18.4",
+    "swr": "^2.5.1",
+    "tailwindcss": "^4.3.3",
+    "valibot": "^1.5.0",
+    "zustand": "^5.0.16"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@cloudflare/workers-types": "^5.20261016.1",
+    "@rolldown/plugin-babel": "^0.2.3",
+    "@types/babel__core": "^7.20.5",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "oxlint": "^1.81.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "wrangler": "^4.151.1"
+  }
+}

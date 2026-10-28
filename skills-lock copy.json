@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "hono": {
+      "source": "honojs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/hono/SKILL.md",
+      "computedHash": "f469bac28a53d010bb47bd61109d0cfebe9a4f3fd407310746114549886b5870"
+    },
+    "hono-jsx": {
+      "source": "honojs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/hono-jsx/SKILL.md",
+      "computedHash": "6b021dcdf7aab408d483ed6f8f679390c43085f830448578eb41bf43adc3cda4"
+    },
+    "hono-void": {
+      "source": "honojs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/hono-void/SKILL.md",
+      "computedHash": "6bf0af0419a674d8713ab2426c33b66fc296ef34dd5b5bc2b5ce6948d5044f1a"
+    }
+  }
+}

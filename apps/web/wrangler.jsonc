@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "crashed-nis-web",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-10-18",
+  "services": [
+    {
+      "binding": "API",
+      "service": "crashed-nis-api",
+    },
+  ],
+}

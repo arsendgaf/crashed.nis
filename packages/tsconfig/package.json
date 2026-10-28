@@ -1,0 +1,11 @@
+{
+  "name": "@crashed-nis/tsconfig",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "bun x tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@tsconfig/strictest": "^2.0.8"
+  }
+}

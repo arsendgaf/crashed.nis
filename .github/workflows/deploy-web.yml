@@ -1,0 +1,45 @@
+name: Deploy Web (Cloudflare Pages)
+
+# Builds the Vite app and deploys it to Cloudflare Pages when release-please
+# publishes a release tag (v*), or manually from the Actions tab. The Pages
+# Function (`functions/api/[[path]].ts` + the `API` service binding) must point
+# to the deployed `crashed-nis-api` Worker before the first run.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy crashed-nis-web
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run --cwd apps/web typecheck && bun run --cwd apps/web build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/web
+          command: pages deploy dist --project-name=crashed-nis-web

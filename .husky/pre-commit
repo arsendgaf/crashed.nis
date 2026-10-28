@@ -1,0 +1,3 @@
+# Formats staged files, auto-fixes fixable lint issues, then typechecks the
+# workspace. Turborepo caches the typecheck, so repeat commits are fast.
+bunx lint-staged && bun x turbo typecheck
