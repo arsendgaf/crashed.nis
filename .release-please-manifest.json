@@ -1,8 +1,8 @@
 {
-  ".": "2.0.0",
-  "apps/api": "2.0.0",
-  "apps/web": "2.0.0",
-  "packages/types": "2.0.0",
-  "packages/ui": "2.0.0",
-  "packages/tsconfig": "2.0.0"
+  ".": "3.0.0",
+  "apps/api": "3.0.0",
+  "apps/web": "3.0.0",
+  "packages/types": "3.0.0",
+  "packages/ui": "3.0.0",
+  "packages/tsconfig": "3.0.0"
 }
