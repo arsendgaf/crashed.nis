@@ -1,18 +1,30 @@
 # Deployment & Release Guide
 
 This guide covers how releases are cut (Conventional Commits + `release-please`), how the CI
-pipeline validates changes, and how the two deployable units ship. **PR validation never
-deploys live** — production deployments run only from `v*` release tags or manual
-`workflow_dispatch` (`deploy-api.yml` / `deploy-web.yml`).
+pipeline validates changes, and how the two deployable units ship. **Deploys are continuous**:
+every push to `main` deploys each unit it touched (an untouched app keeps its live build); PRs
+never deploy — they only validate. `v*` release tags and manual `workflow_dispatch` force a
+full deploy of what `main` currently has.
 
 ## CI/CD pipeline overview
 
-| Workflow             | Trigger                | Jobs                                                                            |
-| -------------------- | ---------------------- | ------------------------------------------------------------------------------- |
-| `ci.yml`             | PRs + pushes to `main` | lint → typecheck → test → build (no deploy)                                     |
-| `release-please.yml` | pushes to `main`       | opens/updates Release PRs, publishes GitHub Releases                            |
-| `deploy-api.yml`     | tags `v*` or manual    | typecheck + API tests → `wrangler deploy` → health smoke check                  |
-| `deploy-web.yml`     | tags `v*` or manual    | typecheck + build → `wrangler pages deploy dist --project-name=crashed-nis-web` |
+| Workflow             | Trigger                        | Jobs                                                                                                       |
+| -------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `ci.yml`             | PRs + pushes to `main`         | lint → typecheck → test → build (no deploy)                                                                |
+| `release-please.yml` | pushes to `main`               | opens/updates Release PRs, publishes GitHub Releases                                                       |
+| `deploy.yml`         | pushes to `main`, `v*`, manual | **per-app CD** (see below) — API-first ordering when both apps change; nothing deploys on docs-only pushes |
+
+**How `deploy.yml` picks what to build** (continuous deployment):
+
+1. A `changes` job (dorny/paths-filter) maps the push's changed files to two flags:
+   - `api` ← `apps/api/**` or shared code (`packages/**`, `bun.lock`, `package.json`, `turbo.json`);
+   - `web` ← `apps/web/**` (including the Pages `functions/`) or shared code.
+2. Job `api` runs **only** when `api` changed (typecheck + full API test suite → `wrangler deploy`
+   → optional `API_HEALTH_URL` smoke check).
+3. Job `web` runs **only** when `web` changed — an untouched frontend keeps its live build
+   bit-for-bit. It `needs: [changes, api]`, so when both apps changed it ships after the Worker
+   (no stale-backend race); when only the web changed, the skipped `api` job lets it proceed.
+4. Docs-only changes deploy nothing.
 
 ## Secrets required for CD
 
@@ -25,7 +37,7 @@ Add both secrets at **GitHub → Settings → Secrets and variables → Actions 
 | `CLOUDFLARE_ACCOUNT_ID` | Workers & Pages → Overview → Account ID (copy the 32-char hex id)                                                                                            |
 
 Optional non-secret variables (same page → "Variables" tab): `API_HEALTH_URL` — the API's
-`https://crashed-nis-api.<subdomain>.workers.dev` base URL, consumed by the deploy-api smoke
+`https://crashed-nis-api.<subdomain>.workers.dev` base URL, consumed by the deploy `api` job's smoke
 check (the check is skipped when unset).
 
 Recommended hardening: wrap each deploy job with a GitHub **Environment** (e.g. `production`,
@@ -90,9 +102,9 @@ build. After a release is merged/tagged:
    git checkout v2.0.0          # or the tag you want
    bun run --cwd apps/api deploy
    ```
-   Or rely on `.github/workflows/deploy-api.yml`, which runs automatically on `v*` tags (and
-   manually via Actions → Deploy API → Run workflow) using the `CLOUDFLARE_API_TOKEN` /
-   `CLOUDFLARE_ACCOUNT_ID` repository secrets.
+   Automatically, deploy.yml does this on every main push that touches `apps/api` / shared code,
+   using the `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` repository secrets; `v*` tags and
+   manual dispatch (Actions → Deploy → Run workflow) redeploy both apps.
 3. Verify: `/health` and `/api/health` respond; `/api/openapi.json` serves the spec; login flow
    works against production NIS endpoints.
 
@@ -110,8 +122,9 @@ build. After a release is merged/tagged:
    bun run --cwd apps/web build
    bun x wrangler pages deploy dist --project-name crashed-nis-web
    ```
-   Or use `.github/workflows/deploy-web.yml` (runs on `v*` tags / manual dispatch) — it
-   typechecks, builds and pushes `dist` to Pages with the same two secrets.
+   Automatically, deploy.yml typechecks, builds and pushes `dist` to Pages with the same two
+   secrets whenever `apps/web` (or shared code) changes on `main`; `v*` tags and manual dispatch
+   redeploy both apps.
 5. Ensure the Service Binding is enabled in the Pages dashboard before cutting the API over.
 
 > The `BACKEND_URL` used by the Vite dev proxy is dev-only — production web traffic goes through

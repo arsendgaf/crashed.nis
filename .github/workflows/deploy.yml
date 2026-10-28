@@ -1,0 +1,125 @@
+name: Deploy (Cloudflare)
+
+# Continuous deployment with strictly per-app builds: every push to main
+# runs after CI, and each app deploys only if something inside its own
+# boundary (apps/<unit>, including the Pages Function) changed — an app with
+# no change keeps its live build untouched. Shared code (packages/**, the
+# lockfile, manifests, turbo) triggers both. When both apps change, the API
+# deploys first so the frontend never goes live against a stale backend.
+# Version tags (v*) cut by release-please and manual dispatch force a full
+# deploy of exactly what main has.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    name: Detect which apps changed
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api || steps.force.outputs.api }}
+      web: ${{ steps.filter.outputs.web || steps.force.outputs.web }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name == 'push' && github.ref_type != 'tag'
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+              - 'packages/**'
+              - 'bun.lock'
+              - 'package.json'
+              - 'turbo.json'
+            web:
+              - 'apps/web/**'
+              - 'packages/**'
+              - 'bun.lock'
+              - 'package.json'
+              - 'turbo.json'
+
+      # Tags and manual dispatch bypass path detection: both apps deploy.
+      - id: force
+        if: github.event_name != 'push' || github.ref_type == 'tag'
+        run: |
+          echo "api=true" >> "$GITHUB_OUTPUT"
+          echo "web=true" >> "$GITHUB_OUTPUT"
+
+  api:
+    name: API → crashed-nis-api (Workers)
+    if: needs.changes.outputs.api == 'true'
+    needs: changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck & test (deploy gate)
+        run: bun run --cwd apps/api typecheck && bun run --cwd apps/api test
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/api
+          command: deploy
+
+      - name: Smoke check the deployed health endpoint
+        if: vars.API_HEALTH_URL != ''
+        run: |
+          sleep 5
+          curl -fsS "${{ vars.API_HEALTH_URL }}/health" -w '\nHTTP %{http_code}\n'
+
+  web:
+    name: Web → crashed-nis-web (Pages)
+    if: >-
+      always() &&
+      needs.changes.outputs.web == 'true' &&
+      (needs.api.result == 'success' || needs.api.result == 'skipped') &&
+      !failure() && !cancelled()
+    needs: [changes, api]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run --cwd apps/web typecheck && bun run --cwd apps/web build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/web
+          command: pages deploy dist --project-name=crashed-nis-web
