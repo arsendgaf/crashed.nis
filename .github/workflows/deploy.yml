@@ -119,6 +119,12 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # Web's tsconfig pulls in apps/api/src via the Hono RPC client graph.
+      # That graph imports @crashed-nis/types, whose dist/ output must exist
+      # in a fresh checkout (locally turbo's dependsOn: ^build provides it).
+      - name: Build shared packages
+        run: bun run --cwd packages/types build
+
       - name: Build
         run: bun run --cwd apps/web typecheck && bun run --cwd apps/web build
 
