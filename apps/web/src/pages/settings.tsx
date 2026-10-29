@@ -227,7 +227,7 @@ function LogoutConfirm({
           </AlertDescription>
         </Alert>
       )}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoggingOut}>
           Остаться
         </Button>
@@ -276,7 +276,7 @@ function LogoutConfirm({
             Выйти из аккаунта?
           </DrawerTitle>
         </DrawerHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto pb-4">{body}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">{body}</div>
       </DrawerContent>
     </Drawer>
   )
