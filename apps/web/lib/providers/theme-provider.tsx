@@ -20,6 +20,42 @@ const initialState: ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
+// Base UI decorates open overlays with data-open on elements whose data-slot
+// is prefixed "dialog" or "drawer" (the only two shells that dim the page);
+// menus, popovers, tooltips and selects use other prefixes, so they never
+// flip the status-bar color.
+const MODAL_SELECTOR = '[data-slot^="dialog"][data-open], [data-slot^="drawer"][data-open]'
+
+// While a modal is open the page sits under a bg-black/80 overlay, so the
+// backdrop the browser should match is the navigation color blended 80%
+// toward black.
+const MODAL_OVERLAY_DARKNESS = 0.8
+
+// Resolve any CSS color through the browser's own parser and blend it toward
+// black, returning a plain hex string (theme-color meta does not support
+// color-mix() or var()).
+const mixTowardBlack = (color: string, amount: number): string | null => {
+  const probe = document.createElement('span')
+  probe.style.backgroundColor = color
+  document.body.appendChild(probe)
+  const computed = getComputedStyle(probe).backgroundColor
+  probe.remove()
+
+  const match = computed.match(/rgba?\(([^)]+)\)/)
+  if (!match) return null
+
+  const channels = match[1].split(',').slice(0, 3).map(Number)
+  if (channels.length !== 3 || channels.some((channel) => Number.isNaN(channel))) return null
+
+  return `#${channels
+    .map((channel) =>
+      Math.round(channel * (1 - amount))
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = 'system',
@@ -35,27 +71,44 @@ export function ThemeProvider({
     const colorScheme = window.matchMedia('(prefers-color-scheme: dark)')
     const themeColor = window.document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
 
-    const applyTheme = () => {
-      const resolvedTheme = theme === 'system' ? (colorScheme.matches ? 'dark' : 'light') : theme
-
-      root.classList.remove('light', 'dark')
-      root.classList.add(resolvedTheme)
-
+    // Keep the meta in sync with both the resolved theme and modal state:
+    // normally it follows the navigation bar color, under an open dialog or
+    // drawer it follows the darkened backdrop instead.
+    const syncThemeColor = () => {
       const navigationColor = window.getComputedStyle(root).getPropertyValue('--sidebar').trim()
+      if (themeColor === null || navigationColor === '') return
 
-      if (themeColor !== null && navigationColor !== '') {
-        themeColor.content = navigationColor
-      }
+      const modalOpen = document.querySelector(MODAL_SELECTOR) !== null
+      themeColor.content = modalOpen
+        ? (mixTowardBlack(navigationColor, MODAL_OVERLAY_DARKNESS) ?? navigationColor)
+        : navigationColor
+    }
+
+    const applyTheme = () => {
+      root.classList.remove('light', 'dark')
+      root.classList.add(theme === 'system' ? (colorScheme.matches ? 'dark' : 'light') : theme)
+
+      syncThemeColor()
     }
 
     applyTheme()
 
-    if (theme === 'system') {
-      colorScheme.addEventListener('change', applyTheme)
-      return () => colorScheme.removeEventListener('change', applyTheme)
-    }
+    // Portaled dialogs and drawers appear as childList mutations under body;
+    // Base UI toggles data-open/data-closed in place while they animate.
+    const modalObserver = new MutationObserver(syncThemeColor)
+    modalObserver.observe(window.document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['data-open', 'data-closed'],
+    })
 
-    return undefined
+    colorScheme.addEventListener('change', applyTheme)
+
+    return () => {
+      modalObserver.disconnect()
+      colorScheme.removeEventListener('change', applyTheme)
+    }
   }, [theme])
 
   const value = {
