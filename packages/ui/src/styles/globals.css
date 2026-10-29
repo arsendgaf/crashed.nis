@@ -129,7 +129,11 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    /* Safari 26+ live-samples this background-color for browser UI tinting,
+       so it must start at the sidebar tint; the ThemeProvider then drives it
+       inline per theme and modal state. The app shell (bg-sidebar) covers
+       the viewport, so the color itself is never actually visible. */
+    @apply bg-sidebar text-foreground;
   }
   button:not(:disabled),
   [role='button']:not(:disabled) {

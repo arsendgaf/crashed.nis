@@ -79,7 +79,7 @@ export function ThemeProvider({
     const colorScheme = window.matchMedia('(prefers-color-scheme: dark)')
     const themeColor = window.document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
 
-    // Keep the meta in sync with both the resolved theme and modal state:
+    // Keep the UI tint in sync with both the resolved theme and modal state:
     // normally it follows the navigation bar color, under an open dialog or
     // drawer it follows the darkened backdrop instead. The key check keeps
     // each (theme color, modal state) pair to a single write: real mutations
@@ -89,16 +89,24 @@ export function ThemeProvider({
 
     const syncThemeColor = () => {
       const navigationColor = window.getComputedStyle(root).getPropertyValue('--sidebar').trim()
-      if (themeColor === null || navigationColor === '') return
+      if (navigationColor === '') return
 
       const modalOpen = document.querySelector(MODAL_SELECTOR) !== null
       const key = `${navigationColor}|${modalOpen ? 'modal' : 'nav'}`
       if (key === lastSyncKey) return
       lastSyncKey = key
 
-      themeColor.content = modalOpen
+      const tint = modalOpen
         ? (mixTowardBlack(navigationColor, MODAL_OVERLAY_DARKNESS) ?? navigationColor)
         : navigationColor
+
+      // Two tint sources for two engine generations: Safari 26+ ignores
+      // theme-color and live-samples the body's background-color instead,
+      // while Chrome, Firefox and Safari ≤ 18.6 still read the meta tag.
+      if (themeColor !== null) {
+        themeColor.content = tint
+      }
+      document.body.style.backgroundColor = tint
     }
 
     const applyTheme = () => {
