@@ -224,7 +224,7 @@ function RubricBody({ subject, quarter, data, error, mutate }: RubricBodyProps) 
         <Button
           type="button"
           variant="outline"
-          className="self-start"
+          className="w-full"
           render={
             <Link to={`/predict?quarter=${quarter}&subject=${encodeURIComponent(subject.id)}`} />
           }

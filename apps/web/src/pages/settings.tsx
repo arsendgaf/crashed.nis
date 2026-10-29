@@ -227,7 +227,7 @@ function LogoutConfirm({
           </AlertDescription>
         </Alert>
       )}
-      <div className="flex justify-end gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoggingOut}>
           Остаться
         </Button>
