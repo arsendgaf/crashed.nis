@@ -64,7 +64,13 @@ export default function SettingsPage() {
         return
       }
 
-      await mutate('auth-session', undefined, { revalidate: false })
+      // Purge everything the session left on the device: cookies are expired
+      // server-side, persisted Zustand stores live in localStorage, and SWR
+      // caches are in-memory — so the cookie clear, a full storage clear and
+      // a cache-wide drop together start the next session from zero.
+      localStorage.clear()
+      sessionStorage.clear()
+      await mutate(() => true, undefined, { revalidate: false })
       navigate('/auth', { replace: true })
     } catch {
       setLogoutError('Не удалось связаться с сервером. Проверьте подключение и повторите попытку.')
@@ -207,9 +213,6 @@ function LogoutConfirm({
 
   const body = (
     <div className="flex flex-col gap-4">
-      <p className="m-0 text-sm text-muted-foreground">
-        Вы выйдете из своего аккаунта на этом устройстве. Повторный вход потребует ИИН и пароля.
-      </p>
       {error !== null && (
         <Alert variant="destructive">
           <AlertTitle>Не удалось выйти</AlertTitle>
@@ -223,7 +226,7 @@ function LogoutConfirm({
       )}
       <div className="flex justify-end gap-3">
         <Button type="button" variant="outline" onClick={onClose} disabled={isLoggingOut}>
-          Оставаться
+          Остаться
         </Button>
         <Button type="button" variant="destructive" onClick={onConfirm} disabled={isLoggingOut}>
           <SignOutIcon aria-hidden="true" />

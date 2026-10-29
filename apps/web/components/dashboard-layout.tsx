@@ -206,7 +206,7 @@ export function DashboardLayout() {
       <main
         id="dashboard-content"
         tabIndex={-1}
-        className="row-start-1 min-h-0 border-2 min-w-0 overflow-y-auto overscroll-contain rounded-xl bg-background shadow-[0_0.75rem_1.5rem_-1.25rem_rgb(15_23_42_/_0.45)] outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/50 lg:row-start-auto lg:shadow-[-0.75rem_0_1.75rem_-1.5rem_rgb(15_23_42_/_0.45)]"
+        className="row-start-1 min-h-0 border-2 min-w-0 overflow-y-auto overscroll-contain rounded-t-none rounded-b-xl bg-background shadow-[0_0.75rem_1.5rem_-1.25rem_rgb(15_23_42_/_0.45)] outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/50 lg:row-start-auto lg:rounded-t-xl lg:shadow-[-0.75rem_0_1.75rem_-1.5rem_rgb(15_23_42_/_0.45)]"
       >
         <div className="mx-auto w-full max-w-6xl p-3 lg:p-[clamp(2rem,5vw,4.5rem)]">
           <header className="-mx-3 sticky top-0 z-10 flex min-w-0 items-center gap-2.5 bg-linear-to-b from-background via-background/60 to-transparent px-3 pb-4 pt-3 lg:hidden">

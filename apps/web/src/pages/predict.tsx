@@ -9,6 +9,7 @@ import { PredictCalculator } from '@/components/predict-calculator'
 import { api } from '@/lib/api/client'
 import { ApiRpcError, useApiSWR } from '@/lib/api/use-api-swr'
 import { rubricTitle } from '@/lib/rubrics'
+import { usePredictStore } from '@/lib/stores/predict-store'
 import { MAX_PERCENT, MIN_PERCENT } from '@/lib/stores/journal-store'
 
 const QUARTERS = ['1', '2', '3', '4'] as const
@@ -40,6 +41,7 @@ const journalPercentFor = (subject: RawSubject | undefined): number | null => {
 
 export default function PredictPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const lastPrediction = usePredictStore((state) => state.last)
 
   const journal = useApiSWR('journal', () => api.api.v1.journal.$get(), {
     revalidateOnFocus: false,
@@ -50,14 +52,24 @@ export default function PredictPage() {
 
   const { data: journalData, error: journalError, mutate: revalidateJournal } = journal
 
+  // The URL wins; without an explicit quarter the last predicted configuration
+  // is the remembered default, with the NIS actual quarter as fallback.
   const rawQuarter = searchParams.get('quarter') ?? ''
-  const actualQuarter = journalData?.findIndex((period) => period.isActual === true) ?? -1
-  const defaultQuarter: Quarter = actualQuarter >= 0 ? QUARTERS[Math.min(3, actualQuarter)] : '1'
-  const activeQuarter: Quarter = (QUARTERS as readonly string[]).includes(rawQuarter)
-    ? (rawQuarter as Quarter)
-    : defaultQuarter
-
   const rawSubject = searchParams.get('subject') ?? ''
+  const rememberedQuarter =
+    lastPrediction !== null && (QUARTERS as readonly string[]).includes(lastPrediction.quarter)
+      ? (lastPrediction.quarter as Quarter)
+      : null
+
+  const hasQuarterParam = rawQuarter !== ''
+  const actualQuarter = journalData?.findIndex((period) => period.isActual === true) ?? -1
+  const defaultQuarter: Quarter = rememberedQuarter
+    ? rememberedQuarter
+    : actualQuarter >= 0
+      ? QUARTERS[Math.min(3, actualQuarter)]
+      : '1'
+  const activeQuarter: Quarter = hasQuarterParam ? (rawQuarter as Quarter) : defaultQuarter
+
   const subjects: readonly RawSubject[] = journalData?.[Number(activeQuarter) - 1]?.subjects ?? []
   const selectedSubject =
     journalData === undefined
@@ -78,6 +90,41 @@ export default function PredictPage() {
       )
     }
   }, [journalData, rawSubject, selectedSubject, setSearchParams])
+
+  // Plain /predict visit: restore the remembered prediction (quarter + subject)
+  // so the sandbox the student left keeps its configuration. Any explicit
+  // choice in the URL — a deep link or a manual selection — is never replaced.
+  const canRestoreFromMemory =
+    lastPrediction !== null &&
+    lastPrediction.subjectId !== '' &&
+    rememberedQuarter !== null &&
+    rawQuarter === '' &&
+    rawSubject === ''
+
+  useEffect(() => {
+    if (journalData === undefined || !canRestoreFromMemory) {
+      return
+    }
+
+    const referenced = journalData[Number(rememberedQuarter) - 1]?.subjects ?? []
+    if (referenced.some((subject) => subject.id === lastPrediction?.subjectId)) {
+      setSearchParams(
+        (previous) => {
+          const next = new URLSearchParams(previous)
+          next.set('quarter', rememberedQuarter)
+          next.set('subject', lastPrediction?.subjectId ?? '')
+          return next
+        },
+        { replace: true },
+      )
+    }
+  }, [
+    journalData,
+    canRestoreFromMemory,
+    rememberedQuarter,
+    lastPrediction?.subjectId,
+    setSearchParams,
+  ])
 
   const updateParams = (quarter: string | undefined, subject: string | undefined) => {
     setSearchParams(
@@ -194,6 +241,8 @@ export default function PredictPage() {
             ) : (
               <PredictCalculator
                 key={`${activeQuarter}-${selectedSubject.id}`}
+                quarter={activeQuarter}
+                subjectId={selectedSubject.id}
                 journalPercent={journalPercentFor(selectedSubject)}
                 data={rubric.data}
                 error={rubric.error}
