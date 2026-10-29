@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.2.0](https://github.com/arsendgaf/crashed.nis/compare/crashed-nis-v3.1.0...crashed-nis-v3.2.0) (2026-10-29)
+
+
+### Features
+
+* remember the last prediction, purge local data on logout, square the mobile panel top ([36ee44d](https://github.com/arsendgaf/crashed.nis/commit/36ee44dc8beea27be919b3718cacb15e3e4a36d7))
+
+
+### Bug Fixes
+
+* clear the remaining lint warning and Vite chunk-size warning ([9b2dd50](https://github.com/arsendgaf/crashed.nis/commit/9b2dd50b633d4e3b8aab33da5a14e4d82bf058ff))
+* drop the fragile bare-cn re-export shim and pin CI's bun ([b554649](https://github.com/arsendgaf/crashed.nis/commit/b554649fdf8f004fbc42f9d28a775c02e0ea2bd8))
+* pad the logout drawer horizontally and stack its actions full-width ([24b7102](https://github.com/arsendgaf/crashed.nis/commit/24b71024c61ef08cc272c2850ec17678c36a110d))
+* remember the prediction on selection, keep it memory-only ([6524062](https://github.com/arsendgaf/crashed.nis/commit/65240622994541cab06991a68270c8f21eb41084))
+* stretch the logout and predict actions to full dialog width ([67ae9e4](https://github.com/arsendgaf/crashed.nis/commit/67ae9e4752d0c3ea0c924033f3982a0e52ce3f04))
+
 ## [3.1.0](https://github.com/arsendgaf/crashed.nis/compare/crashed-nis-v3.0.0...crashed-nis-v3.1.0) (2026-10-29)
 
 
