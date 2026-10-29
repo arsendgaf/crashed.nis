@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it } from 'vitest'
 import type { Bindings } from '@/env'
 import { createApp } from '@/index'
 import { compressToken } from '@/lib/token/compressor'

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it } from 'vitest'
 import { createApp } from '@/index'
 import { compressToken } from '@/lib/token/compressor'
 import type { Journal, Reports, RubricInfo } from '@/shared/schemas/auth.schemas'

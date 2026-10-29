@@ -27,5 +27,13 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "functions", "worker-configuration.d.ts", "app-version.d.ts"]
+  "include": [
+    "src",
+    "functions",
+    "lib",
+    "components",
+    "vitest.setup.ts",
+    "worker-configuration.d.ts",
+    "app-version.d.ts"
+  ]
 }
