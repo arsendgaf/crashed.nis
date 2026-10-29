@@ -26,43 +26,10 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 // flip the status-bar color.
 const MODAL_SELECTOR = '[data-slot^="dialog"][data-open], [data-slot^="drawer"][data-open]'
 
-// While a modal is open the page sits under a bg-black/80 overlay, so the
-// backdrop the browser should match is the navigation color blended 80%
-// toward black.
-const MODAL_OVERLAY_DARKNESS = 0.8
-
-// Resolve any CSS color through the browser's own parser and blend it toward
-// black, returning a plain hex string (theme-color meta does not support
-// color-mix() or var()). The single probe element lives in <head>, outside
-// the body subtree the mutation observer watches, so resolving a color never
-// re-triggers the observer.
-let colorProbe: HTMLSpanElement | null = null
-
-const resolveComputedColor = (color: string): string => {
-  if (colorProbe === null) {
-    colorProbe = document.createElement('span')
-    document.head.appendChild(colorProbe)
-  }
-
-  colorProbe.style.backgroundColor = color
-  return getComputedStyle(colorProbe).backgroundColor
-}
-
-const mixTowardBlack = (color: string, amount: number): string | null => {
-  const match = resolveComputedColor(color).match(/rgba?\(([^)]+)\)/)
-  if (!match) return null
-
-  const channels = match[1].split(',').slice(0, 3).map(Number)
-  if (channels.length !== 3 || channels.some((channel) => Number.isNaN(channel))) return null
-
-  return `#${channels
-    .map((channel) =>
-      Math.round(channel * (1 - amount))
-        .toString(16)
-        .padStart(2, '0'),
-    )
-    .join('')}`
-}
+// While a modal is open the tint follows the page's default background
+// instead of the navigation bar: the modal surface (Dialog on desktop,
+// Drawer sheet on mobile) floats inset with rounded edges, so the browser
+// chrome reads the neutral background rather than a dimmed navigation tint.
 
 export function ThemeProvider({
   children,
@@ -96,9 +63,8 @@ export function ThemeProvider({
       if (key === lastSyncKey) return
       lastSyncKey = key
 
-      const tint = modalOpen
-        ? (mixTowardBlack(navigationColor, MODAL_OVERLAY_DARKNESS) ?? navigationColor)
-        : navigationColor
+      const modalColor = window.getComputedStyle(root).getPropertyValue('--background').trim()
+      const tint = modalOpen && modalColor !== '' ? modalColor : navigationColor
 
       // Two tint sources for two engine generations: Safari 26+ ignores
       // theme-color and live-samples the body's background-color instead,
