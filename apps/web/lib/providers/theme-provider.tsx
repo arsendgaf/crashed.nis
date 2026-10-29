@@ -33,15 +33,23 @@ const MODAL_OVERLAY_DARKNESS = 0.8
 
 // Resolve any CSS color through the browser's own parser and blend it toward
 // black, returning a plain hex string (theme-color meta does not support
-// color-mix() or var()).
-const mixTowardBlack = (color: string, amount: number): string | null => {
-  const probe = document.createElement('span')
-  probe.style.backgroundColor = color
-  document.body.appendChild(probe)
-  const computed = getComputedStyle(probe).backgroundColor
-  probe.remove()
+// color-mix() or var()). The single probe element lives in <head>, outside
+// the body subtree the mutation observer watches, so resolving a color never
+// re-triggers the observer.
+let colorProbe: HTMLSpanElement | null = null
 
-  const match = computed.match(/rgba?\(([^)]+)\)/)
+const resolveComputedColor = (color: string): string => {
+  if (colorProbe === null) {
+    colorProbe = document.createElement('span')
+    document.head.appendChild(colorProbe)
+  }
+
+  colorProbe.style.backgroundColor = color
+  return getComputedStyle(colorProbe).backgroundColor
+}
+
+const mixTowardBlack = (color: string, amount: number): string | null => {
+  const match = resolveComputedColor(color).match(/rgba?\(([^)]+)\)/)
   if (!match) return null
 
   const channels = match[1].split(',').slice(0, 3).map(Number)
@@ -73,12 +81,21 @@ export function ThemeProvider({
 
     // Keep the meta in sync with both the resolved theme and modal state:
     // normally it follows the navigation bar color, under an open dialog or
-    // drawer it follows the darkened backdrop instead.
+    // drawer it follows the darkened backdrop instead. The key check keeps
+    // each (theme color, modal state) pair to a single write: real mutations
+    // (React renders, Base UI toggles) cost one cheap compare, and any stray
+    // self-induced mutation cannot ping-pong into an endless loop.
+    let lastSyncKey: string | null = null
+
     const syncThemeColor = () => {
       const navigationColor = window.getComputedStyle(root).getPropertyValue('--sidebar').trim()
       if (themeColor === null || navigationColor === '') return
 
       const modalOpen = document.querySelector(MODAL_SELECTOR) !== null
+      const key = `${navigationColor}|${modalOpen ? 'modal' : 'nav'}`
+      if (key === lastSyncKey) return
+      lastSyncKey = key
+
       themeColor.content = modalOpen
         ? (mixTowardBlack(navigationColor, MODAL_OVERLAY_DARKNESS) ?? navigationColor)
         : navigationColor
