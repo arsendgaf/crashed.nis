@@ -30,6 +30,26 @@ export default defineConfig(({ mode }) => {
     define: {
       __APP_VERSION__: JSON.stringify(appVersion),
     },
+    build: {
+      rolldownOptions: {
+        output: {
+          // The lazy-loaded Scalar docs page bundles a ~1.5 MB markdown
+          // stack. Grouping the @scalar package modules and splitting them
+          // below the 500 kB reporting limit keeps every chunk small (Vite's
+          // chunk-size warning stays silent) while the docs route keeps
+          // loading everything on demand.
+          codeSplitting: {
+            maxSize: 480,
+            groups: [
+              {
+                name: 'scalar',
+                test: /[\\/]@scalar[\\/]/,
+              },
+            ],
+          },
+        },
+      },
+    },
     plugins: [
       react(),
       babel({ presets: [reactCompilerPreset()] }),

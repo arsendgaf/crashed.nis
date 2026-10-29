@@ -19,8 +19,8 @@ import { api } from '@/lib/api/client'
 import { GRADE_BG } from '@/lib/grades'
 import { usePredictStore } from '@/lib/stores/predict-store'
 import { useSettingsStore } from '@/lib/stores/settings-store'
-import type { Theme } from '@/lib/providers/theme-provider'
-import { useTheme } from '@/lib/providers/theme-provider'
+import type { Theme } from '@/lib/providers/theme-context'
+import { useTheme } from '@/lib/providers/use-theme'
 import { useNavigate } from '../router'
 
 const THEME_OPTIONS = [
