@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 
 // One editable rubric row of the prediction sandbox (structurally mirrors the
 // calculator's entry shape: title editable for custom rows, mark/max always).
@@ -22,20 +21,16 @@ type PredictSandboxState = {
   last: LastPrediction | null
   /** Overwrite the remembered sandbox with the calculator's current state. */
   remember: (last: LastPrediction) => void
-  /** Drop the remembered sandbox (e.g. when its subject no longer exists). */
+  /** Drop the remembered sandbox (called on logout, together with the purge). */
   forget: () => void
 }
 
-// The last sandbox the student actually edited — a single slot, overwritten
-// on every edit. Persisted so leaving the page (or the app) and coming back
-// restores it. Cleared on logout together with the other local data.
-export const usePredictStore = create<PredictSandboxState>()(
-  persist(
-    (set) => ({
-      last: null,
-      remember: (last) => set({ last }),
-      forget: () => set({ last: null }),
-    }),
-    { name: 'predict' },
-  ),
-)
+// The last prediction the student had open — a single in-memory slot, so it
+// survives route navigation (a misclick to Настройки keeps the configuration)
+// but intentionally nothing beyond the current session: no localStorage, and
+// the logout handler calls forget() so the next session starts empty.
+export const usePredictStore = create<PredictSandboxState>()((set) => ({
+  last: null,
+  remember: (last) => set({ last }),
+  forget: () => set({ last: null }),
+}))

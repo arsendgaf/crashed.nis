@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowClockwiseIcon, PlusIcon, XIcon } from '@phosphor-icons/react'
 import { Navigate } from 'react-router'
 import { Alert, AlertDescription, AlertTitle } from '@crashednis/ui/components/alert'
@@ -32,47 +32,6 @@ const entriesFromRubrics = (rubrics: readonly RubricLike[] | undefined): Entry[]
     max: rubric.maxMark?.toString() ?? '',
     custom: false,
   }))
-
-// Permissive read of one remembered entry: the shape is ours, but persisted
-// data stays untrusted at the boundary — anything malformed falls back to its
-// field-level default instead of breaking the restore.
-const normalizeStoredEntry = (value: unknown, index: number): Entry | null => {
-  if (typeof value !== 'object' || value === null) {
-    return null
-  }
-
-  const record = value as {
-    key?: unknown
-    title?: unknown
-    mark?: unknown
-    max?: unknown
-    custom?: unknown
-  }
-
-  const asText = (input: unknown): string => {
-    if (typeof input === 'string') return input
-    if (typeof input === 'number' && Number.isFinite(input)) return input.toString()
-    return ''
-  }
-
-  return {
-    key:
-      typeof record.key === 'string' && record.key !== '' ? record.key : `restored-entry-${index}`,
-    title: asText(record.title),
-    mark: asText(record.mark),
-    max: asText(record.max),
-    custom: record.custom === true,
-  }
-}
-
-const normalizeStoredEntries = (value: unknown): Entry[] | null => {
-  if (!Array.isArray(value)) {
-    return null
-  }
-
-  const entries = value.map(normalizeStoredEntry).filter((entry): entry is Entry => entry !== null)
-  return entries
-}
 
 // Band → quarter mark reading: the configured percentage bands are authoritative.
 const predictedMark = (status: GradeStatus): number =>
@@ -165,35 +124,33 @@ function PredictBody({
 }) {
   const redOrangeThreshold = useSettingsStore((state) => state.redOrangeThreshold)
   const orangeGreenThreshold = useSettingsStore((state) => state.orangeGreenThreshold)
-  const remembered = usePredictStore((state) => state.last)
   const remember = usePredictStore((state) => state.remember)
 
   // The remembered sandbox restores only when it belongs to exactly this
   // quarter + subject; otherwise the calculator starts from the real rubrics.
-  const restored = useMemo(() => {
-    if (remembered === null) {
-      return null
-    }
-    if (remembered.quarter !== quarter || remembered.subjectId !== subjectId) {
-      return null
-    }
-
-    const chapterEntries = normalizeStoredEntries(remembered.chapterEntries)
-    const quarterEntries = normalizeStoredEntries(remembered.quarterEntries)
-
-    if (chapterEntries === null || quarterEntries === null) {
-      return null
-    }
-
-    return { chapterEntries, quarterEntries }
-  }, [remembered, quarter, subjectId])
+  const remembered = usePredictStore.getState().last
+  const rememberedHere =
+    remembered !== null && remembered.quarter === quarter && remembered.subjectId === subjectId
+      ? remembered
+      : null
 
   const [chapterEntries, setChapterEntries] = useState<Entry[]>(() =>
-    restored === null ? entriesFromRubrics(data.sumChapterCriteria) : restored.chapterEntries,
+    rememberedHere === null
+      ? entriesFromRubrics(data.sumChapterCriteria)
+      : rememberedHere.chapterEntries,
   )
   const [quarterEntries, setQuarterEntries] = useState<Entry[]>(() =>
-    restored === null ? entriesFromRubrics(data.sumQuarterCriteria) : restored.quarterEntries,
+    rememberedHere === null
+      ? entriesFromRubrics(data.sumQuarterCriteria)
+      : rememberedHere.quarterEntries,
   )
+
+  // Remember on mount and on every edit. The calculator is keyed per
+  // quarter+subject, so a remount IS a selection: picking a subject and
+  // leaving immediately stores the configuration, not just hand edits.
+  useEffect(() => {
+    remember({ quarter, subjectId, chapterEntries, quarterEntries })
+  }, [remember, quarter, subjectId, chapterEntries, quarterEntries])
 
   // The half-year shape is a property of the real rubric data — changing
   // sandbox marks must not flip it.
@@ -213,22 +170,8 @@ function PredictBody({
     orangeGreen: orangeGreenThreshold,
   })
 
-  // Every user edit overwrites the remembered sandbox; prefill-only mounts do
-  // not, so switching subjects cannot silently discard an edited sandbox.
-  const applyEntries = (section: Section, updater: (entries: Entry[]) => Entry[]) => {
-    const siblingEntries = section === 'chapter' ? quarterEntries : chapterEntries
-    const nextEntries = updater(section === 'chapter' ? chapterEntries : quarterEntries)
-    sectionSetter(section)(nextEntries)
-    remember({
-      quarter,
-      subjectId,
-      chapterEntries: section === 'chapter' ? nextEntries : siblingEntries,
-      quarterEntries: section === 'quarter' ? nextEntries : siblingEntries,
-    })
-  }
-
   const patchEntry = (section: Section, key: string, patch: Partial<Entry>) => {
-    applyEntries(section, (entries) =>
+    sectionSetter(section)((entries) =>
       entries.map((entry) => (entry.key === key ? { ...entry, ...patch } : entry)),
     )
   }
@@ -243,7 +186,7 @@ function PredictBody({
   }
 
   const addEntry = (section: Section) => {
-    applyEntries(section, (entries) => [
+    sectionSetter(section)((entries) => [
       ...entries,
       {
         key: nextEntryKey(),
@@ -256,23 +199,12 @@ function PredictBody({
   }
 
   const removeEntry = (section: Section, key: string) => {
-    applyEntries(section, (entries) => entries.filter((entry) => entry.key !== key))
+    sectionSetter(section)((entries) => entries.filter((entry) => entry.key !== key))
   }
 
-  // Both sections reset in one remember: two separate applies in one event
-  // would let the second read the stale sibling array and un-remember the
-  // first section's reset.
   const resetAllEntries = () => {
-    const nextChapter = entriesFromRubrics(data.sumChapterCriteria)
-    const nextQuarter = entriesFromRubrics(data.sumQuarterCriteria)
-    setChapterEntries(nextChapter)
-    setQuarterEntries(nextQuarter)
-    remember({
-      quarter,
-      subjectId,
-      chapterEntries: nextChapter,
-      quarterEntries: nextQuarter,
-    })
+    setChapterEntries(entriesFromRubrics(data.sumChapterCriteria))
+    setQuarterEntries(entriesFromRubrics(data.sumQuarterCriteria))
   }
 
   return (

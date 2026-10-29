@@ -17,6 +17,7 @@ import { ToggleGroup, ToggleGroupItem } from '@crashednis/ui/components/toggle-g
 import { cn } from '@crashednis/ui/lib/utils'
 import { api } from '@/lib/api/client'
 import { GRADE_BG } from '@/lib/grades'
+import { usePredictStore } from '@/lib/stores/predict-store'
 import { useSettingsStore } from '@/lib/stores/settings-store'
 import type { Theme } from '@/lib/providers/theme-provider'
 import { useTheme } from '@/lib/providers/theme-provider'
@@ -65,9 +66,11 @@ export default function SettingsPage() {
       }
 
       // Purge everything the session left on the device: cookies are expired
-      // server-side, persisted Zustand stores live in localStorage, and SWR
-      // caches are in-memory — so the cookie clear, a full storage clear and
-      // a cache-wide drop together start the next session from zero.
+      // server-side, persisted Zustand stores live in localStorage, the
+      // predict sandbox is remembered in memory, and SWR caches sit in the
+      // module scope — so the cookie clear, a full storage clear, the store
+      // reset and a cache-wide drop together start the next session from zero.
+      usePredictStore.getState().forget()
       localStorage.clear()
       sessionStorage.clear()
       await mutate(() => true, undefined, { revalidate: false })
