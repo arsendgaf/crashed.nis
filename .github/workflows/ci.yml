@@ -36,6 +36,11 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      # Browser Mode runs renderer component tests in Chromium through the
+      # Playwright provider; CI runners need the browser binary and system libs.
+      - name: Install Playwright Chromium
+        run: bun x playwright install --with-deps chromium
+
       - name: Test
         run: bun run test
 

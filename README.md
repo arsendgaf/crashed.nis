@@ -25,7 +25,7 @@ crashed.nis/
 │       ├── components/      # app-specific UI (modals, marks tables, layout)
 │       ├── src/pages/       # Журнал / Табель / Настройки / Прогноз / auth
 │       ├── lib/             # api client + SWR hook, stores (zustand), helpers
-│       └── *.test.ts(x)     # Vitest + happy-dom tests co-located with sources
+│       └── *.test*.(ts|tsx)  # Vitest tests co-located; component tests run in Chromium
 ├── packages/
 │   ├── types/               # @crashed-nis/types — cross-workspace contracts
 │   ├── tsconfig/            # shared strict TypeScript configs
@@ -76,14 +76,14 @@ bun run --cwd apps/web dev:https
 
 Run from the repo root (Turborepo orders workspaces):
 
-| Script              | What it does                                               |
-| ------------------- | ---------------------------------------------------------- |
-| `bun run dev`       | Dev servers for all workspaces                             |
-| `bun run build`     | Production builds (Vite web, Wrangler dry-run api, types)  |
-| `bun run test`      | Vitest suites (API in-memory `app.fetch`, web `happy-dom`) |
-| `bun run lint`      | oxlint across workspaces                                   |
-| `bun run format`    | oxfmt across workspaces                                    |
-| `bun run typecheck` | `tsc --noEmit` for every workspace                         |
+| Script              | What it does                                                         |
+| ------------------- | -------------------------------------------------------------------- |
+| `bun run dev`       | Dev servers for all workspaces                                       |
+| `bun run build`     | Production builds (Vite web, Wrangler dry-run api, types)            |
+| `bun run test`      | Vitest suites (API in-memory `app.fetch`, web Browser Mode Chromium) |
+| `bun run lint`      | oxlint across workspaces                                             |
+| `bun run format`    | oxfmt across workspaces                                              |
+| `bun run typecheck` | `tsc --noEmit` for every workspace                                   |
 
 Per-workspace extras: `bun run --cwd apps/api typegen` (regenerate Worker binding types after
 Wrangler config changes), `bun run --cwd apps/web typegen` (Pages bindings).

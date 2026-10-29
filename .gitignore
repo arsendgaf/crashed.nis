@@ -50,3 +50,10 @@ apps/*/dist/
 
 # Legacy reference repo (not part of the build)
 tmp/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
+
+# Agent tool session state
+.claude/
+.playwright/
+.agents/
