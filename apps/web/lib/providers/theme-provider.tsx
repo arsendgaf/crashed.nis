@@ -26,10 +26,11 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 // flip the status-bar color.
 const MODAL_SELECTOR = '[data-slot^="dialog"][data-open], [data-slot^="drawer"][data-open]'
 
-// While a modal is open the tint follows the page's default background
-// instead of the navigation bar: the modal surface (Dialog on desktop,
-// Drawer sheet on mobile) floats inset with rounded edges, so the browser
-// chrome reads the neutral background rather than a dimmed navigation tint.
+// While a modal is open the tint follows the modal surface color
+// (--popover, the color the Dialog/Drawer sheet panels are painted with)
+// instead of the navigation bar: the panel floats inset with rounded
+// edges, and Safari samples the sheet itself at the bottom edge, so the
+// chrome must match the sheet, not the page behind it.
 
 export function ThemeProvider({
   children,
@@ -63,7 +64,12 @@ export function ThemeProvider({
       if (key === lastSyncKey) return
       lastSyncKey = key
 
-      const modalColor = window.getComputedStyle(root).getPropertyValue('--background').trim()
+      // Safari also samples the open sheet itself (the drawer popup is fixed
+      // at the bottom edge with bg-popover), so the tint must be the popover
+      // surface: in light themes popover === background (plain white), in
+      // dark themes popover is the actual modal sheet color, keeping top and
+      // bottom chrome identical to the sheet.
+      const modalColor = window.getComputedStyle(root).getPropertyValue('--popover').trim()
       const tint = modalOpen && modalColor !== '' ? modalColor : navigationColor
 
       // Two tint sources for two engine generations: Safari 26+ ignores
