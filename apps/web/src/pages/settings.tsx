@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { DevicesIcon, MoonIcon, SignOutIcon, SunIcon } from '@phosphor-icons/react'
-import { useSWRConfig } from 'swr'
 import { Alert, AlertDescription, AlertTitle } from '@crashednis/ui/components/alert'
 import { Button } from '@crashednis/ui/components/button'
 import {
@@ -37,7 +36,6 @@ const APP_VERSION = __APP_VERSION__
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
-  const { mutate } = useSWRConfig()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -73,7 +71,10 @@ export default function SettingsPage() {
       usePredictStore.getState().forget()
       localStorage.clear()
       sessionStorage.clear()
-      await mutate(() => true, undefined, { revalidate: false })
+      // The cross-session SWR reset happens at the next successful login
+      // (auth.tsx): the module-scoped cache plus SWR's internal request
+      // bookkeeping are purged there, the only place no data hook is
+      // subscribed, so the two sessions can never share cached payloads.
       navigate('/auth', { replace: true })
     } catch {
       setLogoutError('Не удалось связаться с сервером. Проверьте подключение и повторите попытку.')

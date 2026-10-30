@@ -47,6 +47,7 @@ coverage
 
 # Deploy artifacts (Wrangler dry-run builds)
 apps/*/dist/
+.vitest/
 
 # Legacy reference repo (not part of the build)
 tmp/

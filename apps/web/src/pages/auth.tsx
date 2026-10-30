@@ -58,6 +58,16 @@ export default function AuthPage() {
         return
       }
 
+      // Purge the previous session's cache before seeding the new gate: the
+      // purge is ordered after the last dashboard mount and BEFORE any data
+      // hook exists on this page, so the revalidation pass clears both the
+      // cached payloads AND SWR's internal request bookkeeping (which it
+      // keeps for the configured dedupe windows) without issuing any
+      // doomed requests. Skipping the bookkeeping — a purge with
+      // `revalidate: false` — leaves those markers behind, and a remount
+      // afterwards silently skips its initial fetch, leaving the first page
+      // stuck in skeletons after a logout-then-login without any reload.
+      await mutate(() => true, undefined, { revalidate: true })
       await mutate('auth-session', { authenticated: true as const }, { revalidate: false })
       navigate('/', { replace: true })
     } catch {
