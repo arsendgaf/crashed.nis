@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.1](https://github.com/arsendgaf/crashed.nis/compare/web-v3.2.0...web-v3.2.1) (2026-10-30)
+
+
+### Bug Fixes
+
+* purge SWR bookkeeping on login so re-login without a reload re-fetches ([2824330](https://github.com/arsendgaf/crashed.nis/commit/2824330f144798cd58b3040130e8e628af9b3a7d))
+
 ## [3.2.0](https://github.com/arsendgaf/crashed.nis/compare/web-v3.1.0...web-v3.2.0) (2026-10-29)
 
 

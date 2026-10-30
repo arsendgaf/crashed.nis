@@ -1,7 +1,7 @@
 {
-  ".": "3.2.0",
+  ".": "3.2.1",
   "apps/api": "3.0.0",
-  "apps/web": "3.2.0",
+  "apps/web": "3.2.1",
   "packages/types": "3.0.0",
   "packages/ui": "3.1.0",
   "packages/tsconfig": "3.0.0"
